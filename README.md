@@ -1,2 +1,2 @@
 # Dietfy
-Ciet Chart Generator
+Diet Chart Generator
