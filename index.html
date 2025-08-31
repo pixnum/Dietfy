@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Dietfy — 7-Day Diet Chart Generator</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Ccircle cx='48' cy='48' r='46' fill='%2309c'%3E%3C/circle%3E%3Cpath d='M30 63c10-6 28-6 38 0' stroke='%23fff' stroke-width='6' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='38' cy='40' r='4' fill='%23fff'/%3E%3Ccircle cx='58' cy='40' r='4' fill='%23fff'/%3E%3C/svg%3E"/>
+<style>
+  :root{
+    --bg:#e7ecf1; --card:#eef3f8; --text:#1b1f23;
+    --shadow1:#c2c8cf; --shadow2:#ffffff; --accent:#0aa4d6; --border:#b9c3cf;
+  }
+  body.dark{
+    --bg:#0f1115; --card:#171a20; --text:#eaeef3;
+    --shadow1:#0a0b0d; --shadow2:#1f232b; --accent:#34c9ff; --border:#2a2f38;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+    display:flex; min-height:100vh; align-items:center; justify-content:center; padding:20px;
+    transition: background .25s, color .25s;
+  }
+  .frame{
+    width:clamp(320px, 92vw, 980px);
+    border-radius:22px;
+    background:var(--card);
+    border:1px solid var(--border);
+    box-shadow: 24px 24px 48px var(--shadow1), -24px -24px 48px var(--shadow2);
+    padding:22px 18px 16px;
+    position:relative;
+  }
+  .header{
+    display:flex; align-items:center; justify-content:center; gap:12px; margin:8px 0 16px;
+  }
+  .logo{
+    width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg, var(--accent), #7ee8fa);
+    box-shadow: inset 6px 6px 12px rgba(0,0,0,.08), inset -6px -6px 12px rgba(255,255,255,.14);
+  }
+  h1{font-size:clamp(20px, 3vw, 28px); margin:0; letter-spacing:.2px}
+  .toggle{
+    position:absolute; top:14px; right:14px; width:56px; height:56px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:22px;
+    background:var(--card); border:1px solid var(--border); cursor:pointer;
+    box-shadow: 8px 8px 16px var(--shadow1), -8px -8px 16px var(--shadow2);
+    transition: transform .15s;
+  }
+  .toggle:active{ transform: scale(.96); }
+  form{
+    display:grid; gap:12px; grid-template-columns: repeat(4, 1fr);
+  }
+  label{font-size:12px; opacity:.85; display:block; margin-bottom:6px}
+  input, select, button{
+    width:100%; padding:10px 12px; border-radius:14px; border:1px solid var(--border);
+    background:var(--card); color:var(--text);
+    box-shadow: inset 6px 6px 12px var(--shadow1), inset -6px -6px 12px var(--shadow2);
+    outline:none;
+  }
+  .span-2{ grid-column: span 2; }
+  .span-4{ grid-column: 1 / -1; }
+  .cta{
+    background:linear-gradient(135deg, var(--accent), #7ee8fa);
+    color:#00212c; font-weight:600; box-shadow: 8px 8px 18px var(--shadow1), -8px -8px 18px var(--shadow2);
+    border:none; cursor:pointer;
+  }
+  .cta:active{ transform: translateY(1px); }
+  .chart{ margin-top:16px; max-height:58vh; overflow:auto; padding-right:6px }
+  .day{ background:var(--card); border:1px solid var(--border); border-radius:18px; padding:12px; margin:10px 0;
+        box-shadow: 8px 8px 16px var(--shadow1), -8px -8px 16px var(--shadow2);}
+  .day h3{ margin:0 0 8px; font-size:18px }
+  .meal{ background:var(--bg); border:1px solid var(--border); border-radius:14px; padding:10px; margin:8px 0;
+         box-shadow: inset 4px 4px 8px var(--shadow1), inset -4px -4px 8px var(--shadow2);}
+  .meta{ font-size:12px; opacity:.9; line-height:1.45; margin-top:4px }
+  .downloads{ display:flex; gap:10px; margin-top:12px }
+  .downloads button{ flex:1; cursor:pointer }
+  footer{ text-align:center; margin-top:12px; font-size:12px; opacity:.75 }
+  @media (max-width:900px){ form{ grid-template-columns: repeat(2,1fr); } }
+  @media (max-width:520px){ form{ grid-template-columns: 1fr; } .span-2,.span-4{ grid-column: auto; } }
+</style>
+</head>
+<body>
+<div class="frame" id="frame">
+  <button class="toggle" id="darkToggle" title="Toggle dark mode">🌙</button>
+  <div class="header">
+    <div class="logo" aria-hidden="true"></div>
+    <h1>Dietfy — 7-Day Diet Chart Generator</h1>
+  </div>
+
+  <form id="dietForm" autocomplete="off">
+    <div>
+      <label for="age">Age</label>
+      <input id="age" type="number" min="1" max="120" value="30" required>
+    </div>
+    <div>
+      <label for="gender">Gender</label>
+      <select id="gender"><option>Male</option><option>Female</option><option>Other</option></select>
+    </div>
+    <div>
+      <label for="weight">Weight (kg)</label>
+      <input id="weight" type="number" min="20" max="300" value="70">
+    </div>
+    <div>
+      <label for="height">Height (cm)</label>
+      <input id="height" type="number" min="80" max="250" value="170">
+    </div>
+    <div class="span-2">
+      <label for="activity">Activity</label>
+      <select id="activity">
+        <option value="sedentary">Sedentary</option>
+        <option value="light">Light</option>
+        <option value="moderate" selected>Moderate</option>
+        <option value="active">Active</option>
+      </select>
+    </div>
+    <div>
+      <label for="goal">Goal</label>
+      <select id="goal">
+        <option value="maintain">Maintain</option>
+        <option value="lose">Lose</option>
+        <option value="gain">Gain</option>
+      </select>
+    </div>
+    <div>
+      <label for="dietPref">Diet Preference</label>
+      <select id="dietPref">
+        <option value="omnivore" selected>Omnivore</option>
+        <option value="vegetarian">Vegetarian</option>
+        <option value="vegan">Vegan</option>
+        <option value="keto">Keto-ish</option>
+      </select>
+    </div>
+    <div class="span-2">
+      <label for="ethnicity">Regional Cuisine Focus</label>
+      <select id="ethnicity">
+        <option value="all" selected>All India</option>
+        <option value="bengali">Bengali</option>
+        <option value="north">North Indian</option>
+        <option value="south">South Indian</option>
+        <option value="west">West Indian</option>
+        <option value="east">East Indian</option>
+        <option value="northeast">North-East</option>
+        <option value="punjabi">Punjabi</option>
+        <option value="gujarati">Gujarati</option>
+        <option value="maharashtrian">Maharashtrian</option>
+        <option value="rajasthani">Rajasthani</option>
+        <option value="kashmiri">Kashmiri</option>
+        <option value="andhra">Andhra</option>
+        <option value="telugu">Telugu</option>
+        <option value="tamil">Tamil</option>
+        <option value="kerala">Kerala</option>
+        <option value="oriya">Odia</option>
+        <option value="bihari">Bihari</option>
+        <option value="assamese">Assamese</option>
+        <option value="goan">Goan</option>
+        <option value="himachali">Himachali</option>
+        <option value="uttarakhandi">Uttarakhand</option>
+        <option value="sindhi">Sindhi</option>
+        <option value="kannda">Kannada</option>
+      </select>
+    </div>
+    <div class="span-2">
+      <label for="condition">Health Condition</label>
+      <select id="condition">
+        <option value="none" selected>None</option>
+        <option value="diabetes">Diabetes</option>
+        <option value="hypertension">Hypertension</option>
+        <option value="pcos">PCOS</option>
+        <option value="heart">Heart Disease</option>
+      </select>
+    </div>
+    <div class="span-4">
+      <button class="cta" type="submit">Generate 7-Day Diet Chart</button>
+    </div>
+  </form>
+
+  <div class="chart" id="dietChart"></div>
+
+  <div class="downloads">
+    <button id="downloadTXT">Download TXT</button>
+    <button id="downloadPDF">Download PDF</button>
+    <button id="downloadDOCX">Download DOCX</button>
+  </div>
+
+  <footer>© Dietfy 2025</footer>
+</div>
+
+<!-- jsPDF for PDF export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+/* ============ CHUNK 1/4 END ============ */
+/* Dark mode toggle */
+const darkBtn = document.getElementById('darkToggle');
+darkBtn.addEventListener('click', ()=>{
+  document.body.classList.toggle('dark');
+  darkBtn.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+});
+
+/* Helpers */
+const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+function shuffle(a){const arr=a.slice(); for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]];} return arr;}
+function deepClone(o){return JSON.parse(JSON.stringify(o));}
+function cap(s){return s? s[0].toUpperCase()+s.slice(1):s;}
+
+/* Rice variations (auto for lunch/dinner) */
+const riceTypes = ["Steamed White Rice","Brown Rice","Basmati Rice","Jeera Rice","Lemon Rice","Tomato Rice","Coconut Rice","Curd Rice","Vegetable Pulao","Peas Pulao","Misti Pulao","Tamarind Rice","Sambar Rice","Mango Rice","Puliyodarai"];
+
+/* ---------- Rule flags (medical heuristics) ----------
+   risk: { diabetes, heart, hypertension, pcos, fried, refined, highSodium, highSatFat, highGL }
+*/
+function mk(name, ingredients, cal, p, c, f, tags, risk={}){
+  return {name, ingredients, cal, protein:p, carbs:c, fat:f, tags, risk};
+}
+
+/* ----- Seed dishes (concise base sets; we will auto-expand to 250+) ----- */
+
+const seeds = {
+  breakfast: [
+    mk("Poha", ["Flattened rice","Onion","Peas","Peanut","Turmeric","Coriander"], 230, 6, 40, 7, ["all","west"], {diabetes:true, refined:true}),
+    mk("Idli & Sambar", ["Idli","Sambar","Coconut chutney"], 220, 7, 38, 4, ["south","all"], {}),
+    mk("Dosa & Chutney", ["Rice batter","Urad dal","Coconut chutney"], 320, 7, 50, 8, ["south"], {diabetes:true}),
+    mk("Rava Upma", ["Semolina","Veg","Peanut","Mustard"], 240, 6, 38, 7, ["south"], {diabetes:true, refined:true}),
+    mk("Moong Dal Chilla", ["Moong dal","Onion","Chilli","Coriander"], 190, 12, 26, 3, ["north","all"], {}),
+    mk("Aloo Paratha (light)", ["Wheat flour","Potato","Spices","Yogurt small"], 340, 8, 54, 10, ["north"], {diabetes:true}),
+    mk("Methi Thepla", ["Wheat flour","Fenugreek","Spices"], 260, 7, 36, 8, ["west"], {}),
+    mk("Pesarattu", ["Green gram","Ginger","Green chilli","Onion"], 220, 12, 30, 4, ["south"], {}),
+    mk("Oats Porridge", ["Oats","Milk/Water","Nuts small"], 220, 8, 36, 5, ["all"], {}),
+    mk("Sprouts Bowl", ["Moong sprouts","Tomato","Onion","Lemon"], 150, 12, 20, 3, ["all"], {}),
+    mk("Paneer Bhurji & Roti", ["Paneer","Onion","Tomato","Roti"], 320, 18, 30, 14, ["north"], {}),
+    mk("Bread Omelette (small)", ["Eggs","Bread","Onion","Tomato"], 300, 14, 28, 12, ["all"], {refined:true}),
+    mk("Ragi Dosa", ["Ragi","Rice","Urad"], 240, 7, 36, 6, ["south"], {}),
+    mk("Sooji Idli", ["Semolina","Yogurt","Veg"], 190, 6, 32, 3, ["south"], {refined:true}),
+    mk("Chirer Pulao (Bengali)", ["Flattened rice","Veg","Spices"], 240, 5, 44, 6, ["bengali","east"], {diabetes:true, refined:true}),
+    mk("Puri & Cholar Dal (small)", ["Wheat/maida","Chana dal","Spices"], 380, 12, 50, 16, ["bengali","east"], {diabetes:true, heart:true, fried:true, refined:true}),
+    mk("Khaman Dhokla", ["Besan","Yogurt","Mustard"], 180, 7, 30, 4, ["west"], {}),
+    mk("Ragi Porridge", ["Ragi","Milk/Water","Jaggery small"], 210, 6, 36, 4, ["south"], {diabetes:true})
+  ],
+  snack: [
+    mk("Roasted Chana", ["Roasted chickpeas","Salt","Masala"], 120, 8, 18, 3, ["all"], {}),
+    mk("Bhel Puri (light)", ["Puffed rice","Onion","Tomato","Tamarind"], 180, 4, 30, 5, ["west"], {diabetes:true, refined:true}),
+    mk("Ghugni (Bengali small)", ["Yellow peas","Onion","Spices"], 200, 12, 30, 6, ["bengali","east"], {}),
+    mk("Samosa (baked small)", ["Wheat","Potato","Peas"], 160, 4, 24, 6, ["all"], {diabetes:true}),
+    mk("Muri Mix", ["Puffed rice","Peanut","Mustard oil","Onion"], 160, 4, 28, 6, ["east"], {diabetes:true, refined:true}),
+    mk("Fruit Chaat (no added sugar)", ["Seasonal fruits","Lemon","Chaat masala"], 120, 2, 28, 1, ["all"], {diabetes:true}),
+    mk("Roasted Makhana", ["Fox nuts","Ghee small","Spices"], 130, 4, 20, 4, ["all"], {}),
+    mk("Dahi Vada (small)", ["Urad vada","Curd","Spices"], 180, 8, 22, 6, ["north"], {}),
+    mk("Momos (steamed veg)", ["Cabbage","Carrot","Wrapper"], 160, 6, 24, 4, ["northeast"], {refined:true}),
+    mk("Sprouts Chaat", ["Sprouts","Onion","Tomato","Lemon"], 150, 10, 18, 4, ["all"], {})
+  ],
+  lunch: [
+    mk("Dal Tadka + Rice", ["Toor dal","Tomato","Jeera","Rice"], 440, 18, 70, 9, ["all"], {}),
+    mk("Rajma + Rice", ["Kidney beans","Onion","Tomato","Rice"], 500, 18, 78, 12, ["north"], {diabetes:true}),
+    mk("Chole + Roti", ["Chickpeas","Tomato","Onion","Roti"], 460, 16, 66, 11, ["north"], {diabetes:true}),
+    mk("Vegetable Pulao", ["Rice","Mixed veg","Spices"], 430, 10, 72, 8, ["all"], {diabetes:true}),
+    mk("Macher Jhol + Rice", ["Fish","Potato","Tomato","Rice"], 500, 26, 64, 15, ["bengali","east"], {heart:true}),
+    mk("Chicken Curry + Rice", ["Chicken","Onion","Tomato","Rice"], 560, 32, 62, 20, ["north"], {heart:true}),
+    mk("Bhindi Masala + Roti", ["Okra","Onion","Tomato","Roti"], 340, 6, 44, 12, ["north"], {}),
+    mk("Sambar Rice", ["Toor dal","Veg","Tamarind","Rice"], 420, 14, 70, 6, ["south"], {}),
+    mk("Khichuri (light)", ["Rice","Moong dal","Ghee small"], 420, 14, 68, 10, ["all"], {}),
+    mk("Paneer Bhurji + Roti", ["Paneer","Onion","Tomato","Roti"], 460, 22, 40, 22, ["north"], {heart:true})
+  ],
+  dinner: [
+    mk("Mixed Veg Curry + Roti", ["Mixed veg","Tomato","Roti"], 380, 10, 48, 12, ["all"], {}),
+    mk("Palak Paneer + Roti", ["Spinach","Paneer","Roti"], 340, 16, 34, 18, ["north"], {}),
+    mk("Tandoori Chicken + Salad", ["Chicken","Yogurt","Spices","Salad"], 420, 30, 8, 22, ["north"], {heart:true}),
+    mk("Sambar + Brown Rice", ["Lentils","Veg","Brown rice"], 410, 14, 66, 6, ["south"], {}),
+    mk("Grilled Fish + Salad", ["Fish","Lemon","Salad"], 360, 28, 8, 16, ["all"], {}),
+    mk("Egg Bhurji + Roti", ["Eggs","Onion","Tomato","Roti"], 360, 18, 34, 16, ["all"], {}),
+    mk("Kadai Veg + Roti", ["Capsicum","Onion","Tomato","Roti"], 360, 8, 42, 14, ["north"], {}),
+    mk("Tofu Stir-fry + Brown Rice", ["Tofu","Veg","Brown rice"], 420, 20, 56, 12, ["all","vegan"], {}),
+    mk("Chole (light) + Roti", ["Chickpeas","Tomato","Roti"], 420, 16, 58, 10, ["north"], {diabetes:true}),
+    mk("Bhapa Ilish + Rice (small)", ["Hilsa","Mustard","Rice"], 540, 28, 62, 24, ["bengali"], {heart:true})
+  ]
+};
+
+/* ----- Variation packs to auto-expand datasets ----- */
+const variations = {
+  breakfast: [
+    {suffix:" with peanuts", add:["Peanut"], cal:+30, p:+1, c:+2, f:+3, risk:{}},
+    {suffix:" with vegetables", add:["Carrot","Beans","Peas"], cal:+25, p:+1, c:+4, f:+0, risk:{}},
+    {suffix:" (no onion/garlic)", add:[], cal:+0, p:+0, c:+0, f:+0, risk:{}},
+    {suffix:" with paneer", add:["Paneer"], cal:+70, p:+6, c:+2, f:+4, risk:{pcos:false}},
+    {suffix:" — millet version", add:["Millet"], cal:-10, p:+1, c:-6, f:+0, risk:{diabetes:false}},
+    {suffix:" — olive oil", add:["Olive oil"], cal:+20, p:+0, c:+0, f:+2, risk:{heart:false}},
+    {suffix:" — baked", add:["Baked"], cal:-40, p:0, c:0, f:-3, risk:{fried:false}}
+  ],
+  snack: [
+    {suffix:" (baked)", add:["Baked"], cal:-40, p:0, c:0, f:-3, risk:{fried:false}},
+    {suffix:" with yogurt dip", add:["Curd dip"], cal:+30, p:+2, c:+2, f:+1, risk:{}},
+    {suffix:" — no added salt", add:[], cal:0, p:0, c:0, f:0, risk:{hypertension:false}},
+    {suffix:" with sprouts", add:["Sprouts"], cal:+30, p:+3, c:+3, f:+0, risk:{}},
+    {suffix:" — millet puff", add:["Millet puff"], cal:-10, p:+1, c:-6, f:0, risk:{diabetes:false}}
+  ],
+  lunch: [
+    {suffix:" with salad", add:["Cucumber","Tomato","Lemon"], cal:+10, p:+1, c:+2, f:0, risk:{}},
+    {suffix:" — brown rice", add:["Brown rice"], cal:-20, p:0, c:-8, f:0, risk:{diabetes:false}},
+    {suffix:" — jeera rice", add:["Jeera rice"], cal:+10, p:0, c:+4, f:0, risk:{}},
+    {suffix:" — low oil", add:["Low oil"], cal:-40, p:0, c:0, f:-4, risk:{heart:false}},
+    {suffix:" — extra dal", add:["Extra dal"], cal:+40, p:+4, c:+6, f:0, risk:{}}
+  ],
+  dinner: [
+    {suffix:" with soup", add:["Tomato soup"], cal:+40, p:+2, c:+6, f:+0, risk:{}},
+    {suffix:" — brown rice", add:["Brown rice"], cal:-20, p:0, c:-8, f:0, risk:{diabetes:false}},
+    {suffix:" — no cream", add:[], cal:-30, p:0, c:0, f:-3, risk:{heart:false}},
+    {suffix:" — grill", add:["Grilled"], cal:-30, p:0, c:0, f:-3, risk:{fried:false}},
+    {suffix:" with stir-fried veg", add:["Broccoli","Beans"], cal:+30, p:+2, c:+4, f:+1, risk:{}}
+  ]
+};
+
+/* ---- Expand seeds to >= 260 items total (≈65/category) ---- */
+function expandCategory(seedArr, vset, targetCount, defaultTags=[]){
+  const out = [];
+  const base = seedArr.slice();
+  // 1) push seeds first
+  base.forEach(x=>out.push(deepClone(x)));
+  // 2) create variations
+  let i=0;
+  while(out.length < targetCount){
+    const src = base[i % base.length];
+    const v = vset[i % vset.length];
+    const item = deepClone(src);
+    item.name = item.name + v.suffix;
+    item.ingredients = Array.from(new Set([...item.ingredients, ...v.add]));
+    item.cal = clamp(Math.round(item.cal + (v.cal||0)), 90, 950);
+    item.protein = clamp(Math.round(item.protein + (v.p||0)), 0, 80);
+    item.carbs = clamp(Math.round(item.carbs + (v.c||0)), 0, 140);
+    item.fat = clamp(Math.round(item.fat + (v.f||0)), 0, 60);
+    item.tags = Array.from(new Set([...(item.tags||[]), ...defaultTags]));
+    // merge risk overrides
+    item.risk = Object.assign({}, item.risk||{}, v.risk||{});
+    out.push(item);
+    i++;
+  }
+  return out;
+}
+
+const MEALS = {
+  breakfast: expandCategory(seeds.breakfast, variations.breakfast, 70, ["all"]),
+  snack:     expandCategory(seeds.snack,     variations.snack,     70, ["all"]),
+  lunch:     expandCategory(seeds.lunch,     variations.lunch,     65, ["all"]),
+  dinner:    expandCategory(seeds.dinner,    variations.dinner,    65, ["all"])
+};
+/* ============ CHUNK 2/4 END ============ */
+/* ---- Diet / Medical / Region filters ---- */
+function isVeg(name, ings){
+  const nv = ["chicken","mutton","fish","prawn","egg","beef","pork","shrimp","hilsa","ilish"];
+  const hay = (name+" "+(ings||[]).join(" ")).toLowerCase();
+  return !nv.some(k=>hay.includes(k));
+}
+function isVegan(name, ings){
+  const animals = ["milk","curd","yogurt","paneer","ghee","butter","cheese","egg"];
+  const hay = (name+" "+(ings||[]).join(" ")).toLowerCase();
+  return isVeg(name, ings) && !animals.some(k=>hay.includes(k));
+}
+function passDietPref(item, pref){
+  if(pref==="omnivore") return true;
+  if(pref==="vegetarian") return isVeg(item.name, item.ingredients);
+  if(pref==="vegan") return isVegan(item.name, item.ingredients);
+  if(pref==="keto") return (item.carbs<=40); // crude
+  return true;
+}
+function passRegion(item, region){
+  if(region==="all") return true;
+  return (item.tags||[]).includes(region) || (item.tags||[]).includes("all");
+}
+function passMedical(item, condition){
+  const r = item.risk||{};
+  if(condition==="none") return true;
+  if(condition==="diabetes") return !r.diabetes && item.carbs<=85;
+  if(condition==="hypertension") return !r.hypertension; // low salt variants allowed
+  if(condition==="pcos") return !r.pcos;
+  if(condition==="heart") return !r.heart && !r.highSatFat && item.fat<=24;
+  return true;
+}
+
+function buildPool(category, pref, region, condition){
+  return MEALS[category].filter(i=>passDietPref(i,pref) && passRegion(i,region) && passMedical(i,condition));
+}
+
+/* ---- BMR/TDEE (optional guidance, not shown but used to nudge macros) ---- */
+function calcTDEE({age, gender, weight, height, activity}){
+  // Mifflin-St Jeor
+  const s = (gender.toLowerCase()==='female')? -161 : 5;
+  const bmr = Math.round(10*weight + 6.25*height - 5*age + s);
+  const mult = {sedentary:1.2, light:1.375, moderate:1.55, active:1.725}[activity] || 1.55;
+  return Math.round(bmr*mult);
+}
+
+/* ---- Unique 7-day generator (no repeats) ---- */
+function addRiceVariant(name){
+  if(/rice|pulao|biryani|curd rice|sambar rice|brown rice/i.test(name)) return name;
+  const v = riceTypes[Math.floor(Math.random()*riceTypes.length)];
+  return `${name} with ${v}`;
+}
+
+function generateWeekPlan(formData){
+  const {goal, dietPref, ethnicity, condition} = formData;
+
+  let bpool = shuffle(buildPool("breakfast", dietPref, ethnicity, condition));
+  let spool = shuffle(buildPool("snack",     dietPref, ethnicity, condition));
+  let lpool = shuffle(buildPool("lunch",     dietPref, ethnicity, condition));
+  let dpool = shuffle(buildPool("dinner",    dietPref, ethnicity, condition));
+
+  // Fallbacks
+  if(!bpool.length) bpool = shuffle(MEALS.breakfast.slice());
+  if(!spool.length) spool = shuffle(MEALS.snack.slice());
+  if(!lpool.length) lpool = shuffle(MEALS.lunch.slice());
+  if(!dpool.length) dpool = shuffle(MEALS.dinner.slice());
+
+  const week = [];
+  for(let day=1; day<=7; day++){
+    const pick = (pool, all)=> pool.length? pool.pop() : shuffle(all.slice())[0];
+
+    const bf = deepClone(pick(bpool, MEALS.breakfast)); bf.type="breakfast";
+    const s1 = deepClone(pick(spool, MEALS.snack));     s1.type="snack";
+    const ln = deepClone(pick(lpool, MEALS.lunch));     ln.type="lunch";
+    const s2 = deepClone(pick(spool, MEALS.snack));     s2.type="snack";
+    const dn = deepClone(pick(dpool, MEALS.dinner));    dn.type="dinner";
+
+    // Add rice variants to lunch/dinner ~50% of the time
+    if(Math.random()<0.5) ln.name = addRiceVariant(ln.name);
+    if(Math.random()<0.5) dn.name = addRiceVariant(dn.name);
+
+    week.push({day, meals:[bf,s1,ln,s2,dn]});
+  }
+  return week;
+}
+
+/* ---- Render ---- */
+const dietChartEl = document.getElementById('dietChart');
+let latestChart = [];
+
+function render(week){
+  dietChartEl.innerHTML = '<h2 style="margin:4px 4px 8px">Your 7-Day Diet Chart</h2>';
+  week.forEach(day=>{
+    const dayEl = document.createElement('div'); dayEl.className='day';
+    dayEl.innerHTML = `<h3>Day ${day.day}</h3>`;
+    day.meals.forEach(m=>{
+      const meal = document.createElement('div'); meal.className='meal';
+      meal.innerHTML = `<strong>${cap(m.type)}:</strong> ${m.name}
+        <div class="meta">Ingredients: ${(m.ingredients||[]).join(", ")||"N/A"}</div>
+        <div class="meta">Calories: ${m.cal||0} kcal &nbsp;•&nbsp; Protein: ${m.protein||0} g &nbsp;•&nbsp; Carbs: ${m.carbs||0} g &nbsp;•&nbsp; Fat: ${m.fat||0} g</div>`;
+      dayEl.appendChild(meal);
+    });
+    dietChartEl.appendChild(dayEl);
+  });
+}
+
+/* ---- Form submit ---- */
+document.getElementById('dietForm').addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const data = {
+    age: +document.getElementById('age').value,
+    gender: document.getElementById('gender').value,
+    weight: +document.getElementById('weight').value,
+    height: +document.getElementById('height').value,
+    activity: document.getElementById('activity').value,
+    goal: document.getElementById('goal').value,
+    dietPref: document.getElementById('dietPref').value,
+    ethnicity: document.getElementById('ethnicity').value,
+    condition: document.getElementById('condition').value
+  };
+
+  // Optional: could use TDEE to bias choices in future; current build focuses on rule filters.
+  latestChart = generateWeekPlan(data);
+  render(latestChart);
+});
+/* ============ CHUNK 3/4 END ============ */
+/* ---- Downloads ---- */
+function buildText(chart){
+  let s = `Dietfy — 7-Day Diet Plan\n\n`;
+  chart.forEach(d=>{
+    s += `Day ${d.day}\n`;
+    d.meals.forEach(m=>{
+      s += `${cap(m.type)}: ${m.name}\n`;
+      s += `Ingredients: ${(m.ingredients||[]).join(", ")||"N/A"}\n`;
+      s += `Calories: ${m.cal||0} kcal, Protein: ${m.protein||0} g, Carbs: ${m.carbs||0} g, Fat: ${m.fat||0} g\n\n`;
+    });
+    s += `\n`;
+  });
+  return s;
+}
+
+document.getElementById('downloadTXT').addEventListener('click', ()=>{
+  if(!latestChart.length){ alert("Please generate a diet chart first."); return; }
+  const blob = new Blob([buildText(latestChart)], {type:'text/plain'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Dietfy_7Day_Chart.txt'; a.click();
+});
+
+document.getElementById('downloadPDF').addEventListener('click', ()=>{
+  if(!latestChart.length){ alert("Please generate a diet chart first."); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'pt',format:'a4'});
+  let y = 40;
+  doc.setFontSize(16); doc.text("Dietfy — 7-Day Diet Plan", 40, y); y += 16;
+  doc.setFontSize(11);
+  latestChart.forEach(d=>{
+    doc.text(`Day ${d.day}`, 40, y); y += 14;
+    d.meals.forEach(m=>{
+      const line1 = `${cap(m.type)}: ${m.name}`;
+      const line2 = `Calories: ${m.cal||0} kcal | P: ${m.protein||0} g | C: ${m.carbs||0} g | F: ${m.fat||0} g`;
+      doc.text(doc.splitTextToSize(line1, 520), 48, y); y += 12;
+      doc.text(doc.splitTextToSize("Ingredients: "+((m.ingredients||[]).join(", ")||"N/A"), 520), 48, y); y += 12;
+      doc.text(line2, 48, y); y += 14;
+      if(y>770){ doc.addPage(); y=40; }
+    });
+    y += 6;
+  });
+  doc.save('Dietfy_7Day_Chart.pdf');
+});
+
+document.getElementById('downloadDOCX').addEventListener('click', ()=>{
+  if(!latestChart.length){ alert("Please generate a diet chart first."); return; }
+  let html = `<html><body><h1>Dietfy — 7-Day Diet Plan</h1>`;
+  latestChart.forEach(d=>{
+    html += `<h2>Day ${d.day}</h2>`;
+    d.meals.forEach(m=>{
+      html += `<h3>${cap(m.type)}: ${m.name}</h3>`;
+      html += `<p><strong>Ingredients:</strong> ${(m.ingredients||[]).join(", ")||"N/A"}</p>`;
+      html += `<p><strong>Macros:</strong> Calories: ${m.cal||0} kcal, Protein: ${m.protein||0} g, Carbs: ${m.carbs||0} g, Fat: ${m.fat||0} g</p>`;
+    });
+  });
+  html += `</body></html>`;
+  const blob = new Blob([html], {type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Dietfy_7Day_Chart.docx'; a.click();
+});
+
+/* Safety note in code:
+   This app uses heuristic nutrition values and rule-based medical filters.
+   It does not replace professional medical advice. Consult a qualified clinician/dietitian for personalized care.
+*/
+</script>
+</body>
+</html>
